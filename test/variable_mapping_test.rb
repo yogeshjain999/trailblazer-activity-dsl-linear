@@ -72,4 +72,32 @@ class VariableMappingTest < Minitest::Spec
 
     _(ctx.to_hash.inspect).must_equal %{{:a=>0, :b=>108, :model_a=>1, :model_b=>3, :model_add=>\"1\", :model_from_a=>1}}
   end
+
+  it do
+    exception = assert_raises do
+      activity = Class.new(Trailblazer::Activity::Path) do
+        step :f, output: :f_output #, output_with_outer_ctx: true
+
+        def f(ctx, **)
+          ctx[:inner_scope] = true
+        end
+
+        def f_output(inner_ctx, outer_ctx, **)
+          {
+            inner_ctx: inner_ctx.to_hash,
+            outer_ctx: outer_ctx.to_hash,
+          }
+        end
+      end
+
+      _signal, (ctx, _flow_options) = Activity::TaskWrap.invoke(activity, [{}, {}], **{})
+
+      _(ctx.to_hash).must_equal({
+        :inner_ctx=>{:inner_scope=>true},
+        :outer_ctx=>{}
+      })
+    end
+
+    _(exception.message).must_equal "wrong number of arguments (given 1, expected 2)"
+  end
 end
