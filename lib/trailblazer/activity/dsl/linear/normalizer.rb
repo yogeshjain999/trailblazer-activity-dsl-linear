@@ -246,9 +246,11 @@ module Trailblazer
             index = Linear::Insert.find_index(sequence, id)
             row   = sequence[index] # from this row we're inheriting options.
 
-            extensions = (row[3][:extensions]||[]) + (ctx[:extensions]||[]) # FIXME: DEFAULTING, FOR FUCK'S SAKE
+            # {inherit} all connections from {parent} step except those which are not managed by {child}.
+            connections = ctx[:outputs] ? row[3][:connections].slice(*ctx[:outputs].keys) : row[3][:connections]
+            extensions  = Array(row[3][:extensions]) + Array(ctx[:extensions])
 
-            ctx = ctx.merge(connections: row[3][:connections], extensions: extensions) # "inherit"
+            ctx = ctx.merge(connections: connections, extensions: extensions) # "inherit"
 
             return Trailblazer::Activity::Right, [ctx, flow_options]
           end
